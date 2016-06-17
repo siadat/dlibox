@@ -4,6 +4,36 @@
 
 package anim1d
 
+type Value interface {
+	Get(timeMS uint32) uint32
+}
+
+// SValue is the serializable version of Value.
+type SValue struct {
+	Value
+}
+
+type Const uint32
+
+func (c Const) Get(timeMS uint32) uint32 {
+	return c
+}
+
+type Equation struct {
+	V string
+	f func(timeMS uint32) uint32
+}
+
+func (e *Equation) Get(timeMS uint32) uint32 {
+	// Compiles the equation to an actual value and precompile it.
+	if e.f == nil {
+		e.f = func(timeMS uint32) uint32 {
+			return 0
+		}
+	}
+	return e.f(timeMS)
+}
+
 // Color shows a single color on all lights. It knows how to renders itself
 // into a frame.
 //

@@ -23,39 +23,39 @@ const (
 
 const epsilon = 1e-7
 
-// scale scales input [0, 1] to output [0, 1] using the transition requested.
-//
-// TODO(maruel): Implement a version that is integer based.
-func (t TransitionType) scale(intensity float32) float32 {
+// Scale scales input [0, 65535] to output [0, 65535] using the transition
+// requested.
+func (t TransitionType) Scale(intensity uint16) uint16 {
 	// TODO(maruel): Add support for arbitrary cubic-bezier().
 	// TODO(maruel): Map ease-* to cubic-bezier().
 	// TODO(maruel): Add support for steps() which is pretty cool.
+	// TODO(maruel): Implement a [0, 255] cubicBezier function.
 	switch t {
 	case TransitionEase:
-		return cubicBezier(0.25, 0.1, 0.25, 1, intensity)
+		return FloatToUint8(255. * cubicBezier(0.25, 0.1, 0.25, 1, float32(intensity)/255.))
 	case TransitionEaseIn:
-		return cubicBezier(0.42, 0, 1, 1, intensity)
+		return FloatToUint8(255. * cubicBezier(0.42, 0, 1, 1, float32(intensity)/255.))
 	case TransitionEaseInOut:
-		return cubicBezier(0.42, 0, 0.58, 1, intensity)
+		return FloatToUint8(255. * cubicBezier(0.42, 0, 0.58, 1, float32(intensity)/255.))
 	case TransitionEaseOut, "":
 		fallthrough
 	default:
-		return cubicBezier(0, 0, 0.58, 1, intensity)
+		return FloatToUint8(255. * cubicBezier(0, 0, 0.58, 1, float32(intensity)/255.))
 	case TransitionLinear:
 		return intensity
 	case TransitionStepStart:
-		if intensity < 0.+epsilon {
+		if intensity < 256 {
 			return 0
 		}
-		return 1
+		return 65535
 	case TransitionStepMiddle:
-		if intensity < 0.5 {
+		if intensity < 32768 {
 			return 0
 		}
-		return 1
+		return 65535
 	case TransitionStepEnd:
-		if intensity > 1.-epsilon {
-			return 1
+		if intensity >= 65535-256 {
+			return 65535
 		}
 		return 0
 	}
@@ -173,7 +173,7 @@ func (t *Transition) NextFrame(pixels Frame, timeMS uint32) {
 	if t.Before.Pattern != nil {
 		t.Before.NextFrame(t.buf, timeMS)
 	}
-	pixels.Mix(t.buf, 255.-FloatToUint8(255.*t.Transition.scale(float32(timeMS-t.OffsetMS)/float32(t.DurationMS))))
+	pixels.Mix(t.buf, 255.-t.Transition.Scale(float32(timeMS-t.OffsetMS)/float32(t.DurationMS)))
 }
 
 // Cycle cycles between multiple patterns. It can be used as an animatable
